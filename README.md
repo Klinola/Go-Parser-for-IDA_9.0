@@ -1,6 +1,9 @@
-## Yet Another Golang binary parser for IDAPro
-
+# GOLANG PARSER FOR IDA 9.0
 **English | [中文](./README_cn.md)**
+
+## About this fork
+
+## Yet Another Golang binary parser for IDAPro
 
 
 ---------------------------------------------------------------------
