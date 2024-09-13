@@ -1,7 +1,17 @@
 ## Yet Another Golang binary parser for IDAPro
 
 **[English](./README.md) | 中文**
+---
+## 关于此分支
 
+这个分支主要是为了使原始脚本与IDA 9.0兼容，并实施了一些最佳实践，以使代码更清晰、更易于维护。主要的改动包括：
+
+1. 将已废弃的 `get_inf_structure()` 替换为 `ida_ida` 模块中的适当访问器函数。
+
+2. 更新了模块导入，以提高清晰度并遵循IDA 9.0 API的变化：
+   * 将 `idaapi.require()` 替换为 `ida_idaapi.require()`
+   * 使用具体的导入（如 `import ida_kernwin`）而不是广泛的 `import idaapi`
+   * 使用 `ida_kernwin.execute_sync()` 执行主函数，确保数据库修改在主线程中进行
 ---------------------------------------------------------------------
 
 > **注意**：

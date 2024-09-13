@@ -1,8 +1,18 @@
 # GOLANG PARSER FOR IDA 9.0
 **English | [中文](./README_cn.md)**
-
+---
 ## About this fork
 
+This fork updates the original script for compatibility with IDA 9.0 and implements some best practices for clearer and more maintainable code. The main changes are:
+
+1. Replaced deprecated `get_inf_structure()` with appropriate accessor functions from `ida_ida` module.
+
+2. Updated module imports for better clarity and to follow IDA 9.0 API changes:
+   * Replaced `idaapi.require()` with `ida_idaapi.require()`
+   * Used specific imports (e.g., `import ida_kernwin`) instead of broad `import idaapi`
+   * Executed main function using `ida_kernwin.execute_sync()` to ensure database modifications occur in the main thread
+
+---
 ## Yet Another Golang binary parser for IDAPro
 
 
