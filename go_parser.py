@@ -2,26 +2,26 @@
 # -*- coding: UTF-8 -*-
 '''
 go_parser.py:
-IDA Plugin for Golang Executable file parsing.
+IDA Plugin for Golang Executable file parsing, compatible with IDA 9.0.
 '''
 
-__author__ = "JiaYu"
+__author__ = "Klinola"
 __license__ = "MIT"
 __version__ = "1.0"
-__email__ = ["jiayu0x@gmail.com"]
+__email__ = ["KelinerALOC@gmail.com"]
 
-import idautils, idc, idaapi
+import ida_idaapi, ida_kernwin
 
 import sys
 
 sys.setrecursionlimit(10000)
 
-idaapi.require("common")
-idaapi.require("strings")
-idaapi.require("pclntbl")
-idaapi.require("moduledata")
-idaapi.require("types_builder")
-idaapi.require("itab")
+ida_idaapi.require("common")
+ida_idaapi.require("strings")
+ida_idaapi.require("pclntbl")
+ida_idaapi.require("moduledata")
+ida_idaapi.require("types_builder")
+ida_idaapi.require("itab")
 
 
 def main():
@@ -53,4 +53,4 @@ def main():
     itab.parse_itab(firstmoddata, type_parser)
 
 if __name__ == '__main__':
-    main()
+    ida_kernwin.execute_sync(main, ida_kernwin.MFF_WRITE)

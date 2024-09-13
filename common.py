@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-import idc, idaapi, idautils
+import idc, ida_segment, idautils, ida_ida, ida_funcs, ida_auto, ida_bytes
+import ida_gdl, ida_search
 import string
 
-finfo = idaapi.get_inf_structure()
 DEBUG = False
 ADDR_SZ = 4 # Default: 32-bit
 GOVER = ""
-MAX_EA = finfo.max_ea
+MAX_EA = ida_ida.inf_get_max_ea()
 CPU_ARCH = "x86" # Default CPU Arch
 ENDIAN = 0 # 0: little endian; 1: big endian
 
@@ -18,10 +18,10 @@ MAGIC_118 = 0xFFFFFFF0  # Magic Number from version 1.18
 MAGIC_120 = 0xFFFFFFF1  # Magic Number from version 1.20
 
 
-if finfo.is_64bit():
+if ida_ida.inf_is_64bit():
     ADDR_SZ = 8
 
-proc_name = finfo.procname.lower()
+proc_name = ida_ida.inf_get_procname().lower()
 if proc_name == "metapc":
     if ADDR_SZ == 8:
         CPU_ARCH = "x64"
@@ -29,9 +29,9 @@ else:
     CPU_ARCH = proc_name
 
 try:
-    is_be = finfo.is_be()
+    is_be = ida_ida.inf_is_be()
 except:
-    is_be = finfo.mf
+    is_be = ida_ida.inf_get_lflags()
 ENDIAN = 1 if is_be else 0
 
 def _info(info_str):
@@ -48,7 +48,7 @@ def _debug(dbg_str):
 def get_seg(seg_names):
     seg = None
     for seg_name in seg_names:
-        seg = idaapi.get_segm_by_name(seg_name)
+        seg = ida_segment.get_segm_by_name(seg_name)
         if seg:
             return seg
 
@@ -69,8 +69,8 @@ def get_text_seg():
 def find_func_by_name(func_name):
     for segea in idautils.Segments():
         for funcea in idautils.Functions(segea, idc.get_segm_end(segea)):
-            if func_name == idaapi.get_func_name(funcea):
-                return idaapi.get_func(funcea)
+            if func_name == ida_funcs.get_func_name(funcea):
+                return ida_funcs.get_func(funcea)
     return None
 
 def read_mem(addr, forced_addr_sz=None, read_only=False):
@@ -78,28 +78,28 @@ def read_mem(addr, forced_addr_sz=None, read_only=False):
 
     if not read_only: # Set bytes to undefined firstly
         if forced_addr_sz:
-            idc.del_items(addr, forced_addr_sz, idc.DELIT_SIMPLE)
+            ida_bytes.del_items(addr, forced_addr_sz, idc.DELIT_SIMPLE)
         else:
-            idc.del_items(addr, ADDR_SZ, idc.DELIT_SIMPLE)
-        idaapi.auto_wait()
+            ida_bytes.del_items(addr, ADDR_SZ, idc.DELIT_SIMPLE)
+        ida_auto.auto_wait()
 
     if forced_addr_sz == 2:
         if not read_only:
-            idc.create_data(addr, idc.FF_WORD, 2, idc.BADADDR)
-            idaapi.auto_wait()
+            ida_bytes.create_data(addr, idc.FF_WORD, 2, idc.BADADDR)
+            ida_auto.auto_wait()
         value = idc.get_wide_word(addr) & 0xFFFF
         return 0 if value == idc.BADADDR else value
     if forced_addr_sz == 4 or ADDR_SZ == 4:
         if not read_only:
-            idc.create_data(addr,idc.FF_DWORD, 4, idc.BADADDR)
-            idaapi.auto_wait()
-        value = idc.get_wide_dword(addr) & 0xFFFFFFFF
+            ida_bytes.create_data(addr,idc.FF_DWORD, 4, idc.BADADDR)
+            ida_auto.auto_wait()
+        value = ida_bytes.get_wide_dword(addr) & 0xFFFFFFFF
         return 0 if value == idc.BADADDR else value
 
     if forced_addr_sz == 8 or ADDR_SZ == 8:
         if not read_only:
-            idc.create_data(addr, idc.FF_QWORD, 8, idc.BADADDR)
-            idaapi.auto_wait()
+            ida_bytes.create_data(addr, idc.FF_QWORD, 8, idc.BADADDR)
+            ida_auto.auto_wait()
         value = idc.get_qword(addr) & 0xFFFFFFFFFFFFFFFF
         return 0 if value == idc.BADADDR else value
 
@@ -113,7 +113,7 @@ def get_goroot():
         _error("Failed to find func contains goroot")
         return goroot_path_str
 
-    goroot_flowchart = idaapi.FlowChart(f=func_goroot)
+    goroot_flowchart = ida_gdl.FlowChart(f=func_goroot)
     ret_cbs = find_ret_cb(goroot_flowchart)
     '''
     runtime.GOROOT() normally has 2 return code blocks:
@@ -165,7 +165,7 @@ def get_goroot():
             goroot_path_addr_val = idc.get_operand_value(curr_addr, 1)
 
             end_addr = goroot_flowchart[cb_idx].end_ea
-            curr_addr = idc.find_code(curr_addr, idaapi.SEARCH_DOWN)
+            curr_addr = idc.find_code(curr_addr, ida_search.SEARCH_DOWN)
             # find goroot path length and OpType of length(instant len number or addr of len)
             while curr_addr <= end_addr:
                 len_optype = idc.get_operand_type(curr_addr, 1)
@@ -182,7 +182,7 @@ def get_goroot():
                     goroot_path_len = idc.get_operand_value(curr_addr, 1)
                     break
 
-                curr_addr = idc.find_code(curr_addr, idaapi.SEARCH_DOWN)
+                curr_addr = idc.find_code(curr_addr, ida_search.SEARCH_DOWN)
 
             if goroot_path_len == 0 or goroot_path_addr == 0:
                 _debug("Invalid GOROOT Address and Length")
@@ -193,7 +193,7 @@ def get_goroot():
                 _debug("Invalid GOROOT")
                 return ""
             idc.create_strlit(goroot_path_addr, goroot_path_addr+goroot_path_len)
-            idaapi.auto_wait()
+            ida_auto.auto_wait()
             break
 
     if len(goroot_path_str) > 0:
@@ -208,7 +208,7 @@ def find_ret_cb(flow_chart):
     ret_cb_list = []
     ret = 0
     for idx in range(flow_chart.size):
-        if flow_chart[idx].type == idaapi.fcb_ret:
+        if flow_chart[idx].type == ida_gdl.fcb_ret:
             # Refer: https://www.hex-rays.com/products/ida/support/sdkdoc/gdl_8hpp.html#afa6fb2b53981d849d63273abbb1624bd
             ret_cb_list.append(idx)
     return ret_cb_list
@@ -239,7 +239,7 @@ def get_goversion():
         _error("Failed to find func runtime_schedinit")
         return
 
-    schedinit_flowchart = idaapi.FlowChart(f=func_goroot)
+    schedinit_flowchart = ida_gdl.FlowChart(f=func_goroot)
     _debug("Flowchart number of runtime_schedinit: %d" % schedinit_flowchart.size)
 
     for fc_idx in range(schedinit_flowchart.size):
@@ -258,7 +258,7 @@ def get_goversion():
             _debug("Real go version string len: %d" % possible_goversion_len)
             if possible_goversion_len >=5 and possible_goversion_len < 10:
                 if idc.create_strlit(possible_goversion_str_addr, possible_goversion_str_addr + possible_goversion_len):
-                    idaapi.auto_wait()
+                    ida_auto.auto_wait()
                     goversion_str = idc.get_bytes(possible_goversion_str_addr, possible_goversion_len).decode()
                     _debug(goversion_str)
                     if goversion_str.startswith("go"):
